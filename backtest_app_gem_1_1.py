@@ -7,40 +7,71 @@ import json
 import sys
 from streamlit.components.v1 import html
 import time
+import qrcode
+from PIL import Image # Pillow is needed by qrcode for image manipulation
+import requests # For making HTTP requests to fetch live F&G index
+import datetime # For handling date/time with F&G index
 
-# Check Streamlit version
+# Check Streamlit version and explicitly exit if too old
 try:
     import streamlit
     st_version = streamlit.__version__
+    # st.sidebar.info(f"Streamlit Version Detected: {st_version}") # REMOVED: Streamlit version display
     if st_version < "1.12.0":
-        st.error(f"Streamlit version {st_version} detected. Please upgrade to 1.12.0 or higher using `pip install --upgrade streamlit`.")
-        st.stop()
+        st.error(f"Streamlit version {st_version} detected. This app requires 1.12.0 or higher. Please upgrade using `pip install --upgrade streamlit`.")
+        st.stop() # This should stop the app execution
 except ImportError:
     st.error("Streamlit is not installed. Please install it using `pip install streamlit`.")
     st.stop()
 
+
 # --- NEW APP TITLE AND SHORT DESCRIPTION ---
 st.title("Backtest your MSTR buying strategy using real historical data")
 st.markdown("Explore detailed strategy information, app instructions, and more below.")
+
+# --- Function to fetch live F&G Index ---
+@st.cache_data(ttl=3600) # Cache for 1 hour to avoid excessive API calls
+def get_live_fg_index():
+    try:
+        # Alternative.me provides a JSON API for historical data, usually including the latest.
+        # This endpoint is generally public and does not require an API key.
+        response = requests.get("https://api.alternative.me/fng/?limit=1")
+        response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
+        data = response.json()
+        if data and data["data"]:
+            latest_entry = data["data"][0]
+            value = latest_entry["value"]
+            sentiment = latest_entry["value_classification"]
+            timestamp = int(latest_entry["timestamp"])
+            # Changed date_str format to remove time and UTC
+            date_str = datetime.datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d")
+            return f"{value} ({sentiment}) - Last updated: {date_str}"
+    except requests.exceptions.RequestException as e:
+        st.warning(f"Could not fetch live F&G Index: {e}. Displaying historical data only.")
+    except (KeyError, IndexError) as e:
+        st.warning(f"Unexpected data format from F&G API: {e}. Displaying historical data only.")
+    return "N/A (Failed to load live data)"
 
 
 # --- Detailed sections in Expanders (Reordered) ---
 
 with st.expander("What is the MSTR F&G Strategy?"):
     st.markdown("""
-    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in Strategy (**MSTR**) stock. It uses the **Bitcoin Fear & Greed (F&G) Index** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
+    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **[Bitcoin Fear & Greed (F&G) Index](https://alternative.me/crypto/fear-and-greed-index/)** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
+
+    For more information on MicroStrategy's Bitcoin strategy, visit the official **[Strategy Investor Relations](https://www.microstrategy.com/investor-relations)** page.
     """)
 
 with st.expander("Why buy MSTR over Bitcoin?"):
     st.markdown("""
-    Choosing to invest in MSTR (Strategy) as opposed to directly buying Bitcoin
+    Choosing to invest in MSTR (MicroStrategy) as opposed to directly buying Bitcoin
     is a strategy some investors adopt for various reasons:
 
     * **Tax-Advantaged Accounts:** MSTR can be purchased within tax-free savings accounts, such as an ISA (UK) or IRA (US), potentially allowing for tax-free profits. This can also help avoid the current ambiguous crypto tax guidelines and the risks associated with incorrect tax reporting.
     * **Traditional Market Accessibility:** MSTR is a NASDAQ-listed public company. This means it can be bought and sold through conventional stock brokerage accounts, making it familiar and accessible to investors who prefer not to use cryptocurrency exchanges or deal with direct crypto custody.
     * **Corporate Structure & Governance:** Investing in MSTR means you're investing in a legally established corporation. While highly concentrated in Bitcoin, the company has an existing software business, management team, and follows traditional financial reporting standards. For some, this corporate wrapper offers a perceived layer of familiarity or regulatory clarity compared to holding Bitcoin directly.
-    * **Leveraged Bitcoin Exposure:** A significant portion of Strategy's corporate treasury is allocated to Bitcoin. Historically, Strategy has used debt financing to acquire large amounts of Bitcoin. This strategy can provide investors with a leveraged (though often more volatile) exposure to Bitcoin's price movements that might be difficult or costly to achieve through direct personal borrowing.
-    * **Michael Saylor's Conviction:** Strategy's Executive Chairman, Michael Saylor, is a vocal and highly influential advocate for Bitcoin. His unwavering commitment to a Bitcoin-centric corporate treasury strategy provides a unique, ideologically-driven leadership that resonates with certain investors.
+    * **Leveraged Bitcoin Exposure:** A significant portion of MicroStrategy's corporate treasury is allocated to Bitcoin. Historically, MicroStrategy has used debt financing to acquire large amounts of Bitcoin. This strategy can provide investors with a leveraged (though often more volatile) exposure to Bitcoin's price movements that might be difficult or costly to achieve through direct personal borrowing.
+    * **Michael Saylor's Conviction:** MicroStrategy's Executive Chairman, Michael Saylor, is a vocal and highly influential advocate for Bitcoin. His unwavering commitment to a Bitcoin-centric corporate treasury strategy provides a unique, ideologically-driven leadership that resonates with certain investors.
 
     **Important Disclaimer:**
     Investing in MSTR carries unique risks beyond direct Bitcoin exposure. This includes:
@@ -55,6 +86,32 @@ with st.expander("About this App"):
     st.markdown("""
     The **MSTR F&G Strategy Backtest App** empowers users to simulate and optimize this trading strategy with historical data. Its intuitive interface features **sliders to adjust parameters** like F&G thresholds, position sizes, and BTC confirmation, instantly showing their impact on returns, trades, and portfolio performance. Users can **save and load strategy configurations**, view detailed yearly metrics, and explore MSTR and BTC price charts with trade signals, which can be downloaded as images. Built for traders and investors, the app offers a **risk-free way to refine strategies and gain insights.**
     """)
+    st.warning("""
+    **Disclaimer on Usage:**
+    All information, content, and tools provided within this application are for informational and educational purposes only. They are not intended as financial, investment, or trading advice. Past performance is not indicative of future results. The simulations and backtests presented are based on historical data and do not guarantee actual future returns. Market conditions can change rapidly.
+
+    **By using this app, you acknowledge and agree that:**
+    * You are solely responsible for any investment decisions you make.
+    * Any losses incurred, directly or indirectly, from the use of the information or strategies presented in this app are your sole responsibility.
+    * You should consult with a qualified financial professional before making any real investment decisions.
+    """)
+
+# --- Display Live F&G Index and MSTR Price Info after expanders ---
+st.subheader("Current Market Insights")
+col_live1, col_live2 = st.columns(2)
+
+with col_live1:
+    st.markdown(f"**Bitcoin Fear & Greed Index:**")
+    st.info(get_live_fg_index())
+
+with col_live2:
+    st.markdown(f"**Latest MSTR Price:**")
+    # Wrapped the button in st.warning to give it a yellowish background
+    with st.warning(" "): # Added a space as body argument. This is a workaround for old versions
+                          # if for some reason the st.stop() isn't working, but with 1.45.1
+                          # it should just work with empty body.
+        st.link_button("Check MSTR on Nasdaq", "https://www.nasdaq.com/market-activity/stocks/mstr")
+
 
 # Load data
 @st.cache_data
@@ -407,7 +464,7 @@ def backtest_strategy(df, buy_threshold, sell_threshold, buy_pct, sell_pct, btc_
     # This cache key is now just for the function, not session state
     # No need for manual cache in session state if using @st.cache_data
     # Cache key generated automatically by Streamlit
-    
+
     cash = initial_capital
     shares = 0
     costs = 0
@@ -503,7 +560,7 @@ def backtest_strategy(df, buy_threshold, sell_threshold, buy_pct, sell_pct, btc_
         "Annualized Return": annualized_return * 100,  # Convert to percentage
         "Trades": len(trades_df),
         "Trades_df": trades_df,
-        "Skipped_Trades": skipped_trades,
+        "Skipped_Trades": skipped_trades, # Corrected key
         "Portfolio_df": portfolio_df
     }
 
@@ -573,7 +630,6 @@ st.header("Yearly Performance Breakdown")
 if not yearly_metrics_df.empty:
     total_profit = yearly_metrics_df["Profit"].sum()
 
-    # --- MODIFIED PART FOR CONDITIONAL PROFIT COLOR IN TABLE (Pandas Styler) ---
     # Define a function to apply color based on profit value
     def highlight_profit_cell(val):
         color = "white" # Default for zero
@@ -584,14 +640,13 @@ if not yearly_metrics_df.empty:
         return f"color: {color};"
 
     # Create a Styler object from the original yearly_metrics_df
-    # Apply the color function to the 'Profit' column using applymap
-    styled_yearly_metrics_df = yearly_metrics_df.style.applymap(
+    # Apply the color function to the 'Profit' column using map (corrected)
+    styled_yearly_metrics_df = yearly_metrics_df.style.map( # Changed from applymap to map
         highlight_profit_cell,
         subset=['Profit'] # Apply only to the 'Profit' column
     )
 
     # Apply number formatting to all relevant columns within the Styler
-    # This formats the numbers *after* the color is applied.
     styled_yearly_metrics_df = styled_yearly_metrics_df.format({
         "Profit": "${:,.2f}",
         "Annual Return (%)": "{:.2f}%",
@@ -601,12 +656,10 @@ if not yearly_metrics_df.empty:
 
 
     st.write("**Yearly Metrics**")
-    # Pass the styled DataFrame to st.dataframe
     st.dataframe(styled_yearly_metrics_df, hide_index=True)
     st.write(f"**Total Profit Across All Years**: ${total_profit:,.2f}")
 else:
     st.warning("No yearly metrics available. Check data span or trades.")
-# --- END MODIFIED PART ---
 
 
 # Display overall results
@@ -616,7 +669,6 @@ col1, col2 = st.columns(2)
 with col1:
     st.metric("Starting Capital", f"${initial_capital:,.2f}")
 
-    # --- MODIFIED PART FOR CONDITIONAL PROFIT COLOR (Overall) ---
     profit_value = result['Profit']
     if profit_value >= 0:
         profit_color = "green"
@@ -633,18 +685,165 @@ with col1:
         """,
         unsafe_allow_html=True
     )
-    # --- END MODIFIED PART ---
 
     st.metric("Annualized Return", f"{result['Annualized Return']:.2f}%")
 
 with col2:
     st.metric("Final Shares", f"{result['Final Shares']:,.2f}")
-    st.metric("Final Cash", f"${result['Final Cash']:,.2f}")
+    st.metric("Final Cash", f"${result['Final Cash']:,.2f}") # Corrected: used 'Final Cash' from result dict
     st.metric("Total Costs", f"${result['Costs']:,.2f}")
 
 st.metric("Number of Trades", result["Trades"])
 if result["Skipped_Trades"] > 0:
     st.warning(f"**Skipped Trades**: {result['Skipped_Trades']} due to insufficient funds.")
+
+
+# --- AI Strategy Feedback Section ---
+st.header("🤖 AI Strategy Feedback")
+st.info(
+    "**Disclaimer:** This feedback is generated by a rule-based AI simulation "
+    "based on the backtest results and input parameters. It is intended for "
+    "informational and exploratory purposes only and **does not constitute "
+    "financial advice or a guarantee of future performance.** Always conduct "
+    "your own research."
+)
+
+# New function for car comparison - now returns just the core sentence
+def get_car_comparison_text(profit_amount):
+    if profit_amount <= -5000: # Significant loss
+        return f"${abs(profit_amount):,.2f} 😭 Ouch, how are you going to feed the kids?!"
+    elif profit_amount < 0: # Small to moderate loss
+        return f"${abs(profit_amount):,.2f} 😥 Oh no, I can see a baked beans on toast diet in your future."
+    elif profit_amount < 100: # Very small profit
+        return f"${profit_amount:,.2f} 🤔 You might afford a decent coffee."
+    elif profit_amount < 1000: # Small profit, mountain bike range
+        return f"${profit_amount:,.2f} Not bad, you might be able to get a slightly used mountain bike off Marketplace!"
+    elif profit_amount < 5000:
+        return f"${profit_amount:,.2f} Amazing! That's a solid down payment on a reliable used car."
+    elif profit_amount < 15000:
+        return f"${profit_amount:,.2f} Incredible! That's used Toyota Corolla money!"
+    elif profit_amount < 30000:
+        return f"${profit_amount:,.2f} Fantastic! That's enough for a nice, low-mileage used SUV."
+    elif profit_amount < 50000:
+        return f"${profit_amount:,.2f} Wow! You're looking at brand new Toyota Camry money!"
+    elif profit_amount < 80000:
+        return f"${profit_amount:,.2f} Splendid! That's entry-level luxury sedan (e.g., BMW 3-Series) money!"
+    elif profit_amount < 150000:
+        return f"${profit_amount:,.2f} Impressive! You're in Porsche Boxster/Cayman territory!"
+    elif profit_amount < 250000:
+        return f"${profit_amount:,.2f} Absolutely Stunning! That's Porsche 911 Targa money!"
+    elif profit_amount < 500000:
+        return f"${profit_amount:,.2f} Phenomenal! You're in exotic supercar territory – think Ferrari F8!"
+    else: # profit_amount >= 500000
+        return f"${profit_amount:,.2f} Astounding! That's multiple dream cars money! Or you can always cash out, buy Bitcoin and spend your retirement living in the Bitcoin Citadel alongside Michael Saylor!"
+
+
+def generate_ai_feedback(results, params, yearly_metrics_df):
+    feedback = []
+
+    profit = results["Profit"]
+    annual_return = results["Annualized Return"]
+    num_trades = results["Trades"]
+    total_costs = results["Costs"]
+    skipped_trades = results["Skipped_Trades"]
+    initial_capital = params["initial_capital"]
+    buy_threshold = params["buy_threshold"]
+    sell_threshold = params["sell_threshold"]
+    # These parameters already hold the percentage value (e.g., 15.0), not a fraction.
+    buy_pct_display = params["buy_pct"]
+    sell_pct_display = params["sell_pct"]
+    btc_confirm = params["btc_confirm"]
+    cooldown_days = params["cooldown_days"]
+
+    # --- Car Comparison Feedback (Moved to the beginning) ---
+    feedback.append("\n---") # Separator
+    feedback.append(f"🚗 {get_car_comparison_text(profit)}") # No bolding, directly calls function
+    feedback.append("---") # Separator
+
+    # --- Overall Performance Summary ---
+    if annual_return > 15:
+        feedback.append("✨ **Outstanding Performance!** Your strategy generated a strong annualized return, indicating excellent historical profitability.")
+    elif annual_return > 5:
+        feedback.append("📈 **Solid Performance.** The strategy delivered a positive annualized return, showing good potential.")
+    elif annual_return >= 0:
+        feedback.append("⚖️ **Modest Performance.** The strategy broke even or yielded a small positive return. There might be room for optimization.")
+    else:
+        feedback.append("📉 **Underperforming Strategy.** Your strategy resulted in a negative annualized return. It's highly recommended to revise the parameters.")
+
+    # --- Profitability Analysis ---
+    if profit > 0:
+        feedback.append(f"The strategy achieved a net profit of ${profit:,.2f} over the backtesting period.")
+    else:
+        feedback.append(f"The strategy incurred a net loss of ${abs(profit):,.2f} over the backtesting period.")
+
+    # --- Trading Activity & Efficiency ---
+    if num_trades > 50:
+        feedback.append(f"With {num_trades} trades executed, the strategy was quite active, potentially capturing many market movements.")
+    elif num_trades > 10:
+        feedback.append(f"A total of {num_trades} trades were executed, which is a moderate activity level.")
+    else:
+        feedback.append(f"Only {num_trades} trades were executed. This suggests a very selective strategy, or perhaps missed opportunities due to strict parameters.")
+
+    if skipped_trades > 0 and num_trades == 0:
+        feedback.append(f"⚠️ **Warning:** {skipped_trades} trades were skipped, and no trades were executed at all. This often means the initial capital (${initial_capital:,.2f}) or buy percentage ({buy_pct_display:.1f}%) was too low to cover transaction costs or minimum buy amounts for MSTR at historical prices.")
+    elif skipped_trades > 0:
+        feedback.append(f"Consider adjusting your capital or trade size: {skipped_trades} trades were skipped due to insufficient funds, which could have impacted overall performance.")
+
+    if total_costs > (profit * 0.1) and profit > 0: # If costs are more than 10% of profit
+        feedback.append(f"Transaction costs (${total_costs:,.2f}) seem somewhat high relative to the profit. Optimizing trade frequency or size might help reduce this impact.")
+    elif profit <= 0 and total_costs > 0:
+        feedback.append(f"Transaction costs (${total_costs:,.2f}) contributed to the loss. High costs can be detrimental when profitability is low.")
+
+    # --- Parameter Insights ---
+    feedback.append("\n**Insights on Your Parameters:**")
+    if buy_threshold <= 20:
+        feedback.append(f"- Your Buy Threshold ({buy_threshold}) is very conservative, aiming to buy only when Fear is extreme. This might lead to fewer trades but potentially higher conviction entry points.")
+    elif buy_threshold <= 40:
+        feedback.append(f"- Your Buy Threshold ({buy_threshold}) is moderately conservative. It seeks buying opportunities during significant market fear.")
+    else:
+        feedback.append(f"- Your Buy Threshold ({buy_threshold}) is relatively high. This may lead to more frequent buys but potentially less favorable entry points during periods of moderate fear.")
+
+    if sell_threshold >= 80:
+        feedback.append(f"- Your Sell Threshold ({sell_threshold}) is very aggressive, aiming to sell only when Greed is extreme. This seeks to maximize gains but risks missing exits if the market turns before extreme greed is reached.")
+    elif sell_threshold >= 60:
+        feedback.append(f"- Your Sell Threshold ({sell_threshold}) is moderately aggressive, aiming to sell when greed is elevated. This is a balanced approach to profit-taking.")
+    else:
+        feedback.append(f"- Your Sell Threshold ({sell_threshold}) is relatively low. This might lead to more frequent sells, potentially missing further upside during extended periods of greed.")
+
+    if buy_pct_display <= 10.0:
+        feedback.append(f"- Your Buy Percentage ({buy_pct_display:.1f}%) is quite small. This reduces risk but might lead to slower capital deployment and less significant gains when opportunities arise.")
+    elif buy_pct_display >= 30.0:
+        feedback.append(f"- Your Buy Percentage ({buy_pct_display:.1f}%) is relatively large. This can amplify gains but also increases risk per trade.")
+
+    if sell_pct_display <= 10.0:
+        feedback.append(f"- Your Sell Percentage ({sell_pct_display:.1f}%) is modest. This allows you to retain a portion of your holdings, potentially benefiting from further upside.")
+    elif sell_pct_display >= 30.0:
+        feedback.append(f"- Your Sell Percentage ({sell_pct_display:.1f}%) is substantial. This allows for quick profit realization but might lead to selling off too much too soon.")
+
+    if btc_confirm:
+        feedback.append("- BTC Confirmation is enabled, adding an extra layer of market trend validation. This typically reduces trade frequency but aims to increase conviction.")
+    else:
+        feedback.append("- BTC Confirmation is disabled. This means trades are solely based on the F&G index, potentially leading to more signals but without external market validation.")
+
+    if cooldown_days > 0:
+        feedback.append(f"- A Cooldown Period of {cooldown_days} days is applied. This prevents rapid successive trades, which can reduce transaction costs and mitigate overtrading, but might miss immediate subsequent opportunities.")
+    else:
+        feedback.append("- No Cooldown Period is applied, allowing for immediate re-entry/exit if conditions are met. Be mindful of potential overtrading and accumulating transaction costs.")
+
+
+    # --- Further Suggestions ---
+    feedback.append("\n**Suggestions for Further Exploration:**")
+    feedback.append("- **Adjust parameters incrementally:** Try modifying one parameter at a time to understand its isolated impact on performance.")
+    feedback.append("- **Explore different market cycles:** Consider how this strategy might perform in different bullish, bearish, or sideways market conditions (though data is fixed here).")
+    feedback.append("- **Risk Management:** Always define your risk tolerance and position sizing before applying any strategy in live trading.")
+    feedback.append("- **Diversification:** Consider how this MSTR-specific strategy fits into a broader diversified investment portfolio.")
+
+    return "\n".join(feedback)
+
+# Generate and display AI feedback
+ai_feedback_text = generate_ai_feedback(result, st.session_state.slider_values, yearly_metrics_df)
+st.markdown(ai_feedback_text)
+
 
 # Display trade summary
 st.subheader("Trade Summary")
@@ -779,3 +978,65 @@ if not df.empty:
     plt.close(fig)
 else:
     st.warning("No BTC price data to plot.")
+
+
+# --- Monetization/Support Section (Added to sidebar) ---
+st.sidebar.markdown("---")
+st.sidebar.subheader("Support My Work!")
+st.sidebar.markdown(
+    "If you find this app helpful, please consider supporting its ongoing development. "
+    "Your generosity is greatly appreciated!"
+)
+
+# Replace with your actual Ko-fi or Buy Me a Coffee link
+st.sidebar.link_button("☕ Buy Me a Coffee", "https://ko-fi.com/yourusername_or_buymeacoffee_link") # <<< IMPORTANT: REPLACE THIS!
+
+# Replace with your actual Bitcoin address
+YOUR_BITCOIN_ADDRESS = "bc1q...your_bitcoin_address_here...xyz" # <<< IMPORTANT: REPLACE THIS!
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("Donate with Bitcoin (BTC)")
+st.sidebar.code(YOUR_BITCOIN_ADDRESS)
+
+# Generate and display QR code on the fly
+try:
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=5,
+        border=4,
+    )
+    qr.add_data(f"bitcoin:{YOUR_BITCOIN_ADDRESS}")
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+
+    st.sidebar.image(buf, caption="Scan to donate BTC")
+
+except ImportError:
+    st.sidebar.warning("Install 'qrcode' and 'Pillow' for QR code display: `pip install qrcode Pillow`")
+except Exception as e:
+    st.sidebar.error(f"Error generating QR code: {e}")
+
+
+# --- Authorship/Source Code Section (Added to sidebar) ---
+st.sidebar.markdown("---")
+st.sidebar.info(
+    "App developed by **[Your Name/Twitter Handle]**. "
+    "For more projects and insights, follow me on Twitter: "
+    "[@[YourTwitterHandle]](https://twitter.com/[YourTwitterHandle])"
+)
+st.sidebar.markdown(
+    "Find the source code on [GitHub](https://github.com/your-username/your-repo-name)."
+)
+
+# Remember to update the placeholders:
+# - 'https://ko-fi.com/yourusername_or_buymeacoffee_link'
+# - 'bc1q...your_bitcoin_address_here...xyz'
+# - '[Your Name/Twitter Handle]'
+# - '[YourTwitterHandle]'
+# - 'https://github.com/your-username/your-repo-name'
