@@ -27,7 +27,7 @@ st.markdown("Explore detailed strategy information, app instructions, and more b
 
 with st.expander("What is the MSTR F&G Strategy?"):
     st.markdown("""
-    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **Bitcoin Fear & Greed (F&G) Index** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
+    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in Strategy (**MSTR**) stock. It uses the **Bitcoin Fear & Greed (F&G) Index** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
     """)
 
 with st.expander("App Instructions"):
@@ -37,13 +37,14 @@ with st.expander("App Instructions"):
 
 with st.expander("Why buy MSTR over Bitcoin?"):
     st.markdown("""
-    Choosing to invest in MSTR (MicroStrategy) as opposed to directly buying Bitcoin
+    Choosing to invest in MSTR (Strategy) as opposed to directly buying Bitcoin
     is a strategy some investors adopt for various reasons:
 
+    * **Tax-Advantaged Accounts:** MSTR can be purchased within tax-free savings accounts, such as an ISA (UK) or IRA (US), potentially allowing for tax-free profits. This can also help avoid the current ambiguous crypto tax guidelines and the risks associated with incorrect tax reporting.
     * **Traditional Market Accessibility:** MSTR is a NASDAQ-listed public company. This means it can be bought and sold through conventional stock brokerage accounts, making it familiar and accessible to investors who prefer not to use cryptocurrency exchanges or deal with direct crypto custody.
     * **Corporate Structure & Governance:** Investing in MSTR means you're investing in a legally established corporation. While highly concentrated in Bitcoin, the company has an existing software business, management team, and follows traditional financial reporting standards. For some, this corporate wrapper offers a perceived layer of familiarity or regulatory clarity compared to holding Bitcoin directly.
-    * **Leveraged Bitcoin Exposure:** A significant portion of MicroStrategy's corporate treasury is allocated to Bitcoin. Historically, MicroStrategy has used debt financing to acquire large amounts of Bitcoin. This strategy can provide investors with a leveraged (though often more volatile) exposure to Bitcoin's price movements that might be difficult or costly to achieve through direct personal borrowing.
-    * **Michael Saylor's Conviction:** MicroStrategy's Executive Chairman, Michael Saylor, is a vocal and highly influential advocate for Bitcoin. His unwavering commitment to a Bitcoin-centric corporate treasury strategy provides a unique, ideologically-driven leadership that resonates with certain investors.
+    * **Leveraged Bitcoin Exposure:** A significant portion of Strategy's corporate treasury is allocated to Bitcoin. Historically, Strategy has used debt financing to acquire large amounts of Bitcoin. This strategy can provide investors with a leveraged (though often more volatile) exposure to Bitcoin's price movements that might be difficult or costly to achieve through direct personal borrowing.
+    * **Michael Saylor's Conviction:** Strategy's Executive Chairman, Michael Saylor, is a vocal and highly influential advocate for Bitcoin. His unwavering commitment to a Bitcoin-centric corporate treasury strategy provides a unique, ideologically-driven leadership that resonates with certain investors.
 
     **Important Disclaimer:**
     Investing in MSTR carries unique risks beyond direct Bitcoin exposure. This includes:
@@ -185,95 +186,85 @@ document.addEventListener('DOMContentLoaded', function() {
 
 window.addEventListener('message', function(event) {
     if (event.data.type === 'SET_ACTIVE_SLIDER') {
-        const slider = document.querySelector(`input[data-testid="stSlider"][aria-label="${event.data.sliderId}"]`);
-        if (slider) {
-            slider.focus();
-        }
-    }
-});
-</script>
+        const slider = document.querySelector(`input[data-testid="stSlider"][aria-label="<span class="math-inline">\{event\.data\.sliderId\}"\]\`\);
+if \(slider\) \{
+slider\.focus\(\);
+\}
+\}
+\}\);
+</script\>
 """
-html(js_code, height=0)
-
-# Sidebar inputs
-st.sidebar.header("Strategy Parameters")
-
-# We will keep the debounce logic for mouse interactions,
-# but it's important to understand it's the bottleneck for keyboard speed.
-# For the new buttons, we will bypass it.
-def update_slider_value(slider_key, value):
-    st.session_state.slider_values[slider_key] = value
-    st.session_state.active_slider = slider_key # Still useful for visual feedback
-    st.session_state.run_backtest = True # Trigger recalculation
-
-def on_slider_change(slider_key):
-    # This function is called by Streamlit's slider on_change.
-    # It still uses a debounce to prevent excessive re-runs during dragging.
-    current_time = time.time()
-    if current_time - st.session_state.last_update_time > 0.5:
-        widget_value = st.session_state[slider_key]
-        if slider_key in ["buy_pct", "sell_pct"]:
-            widget_value = float(widget_value)
-        elif slider_key == "btc_confirm":
-            widget_value = bool(widget_value)
-        else:
-            widget_value = int(widget_value)
-        update_slider_value(slider_key, widget_value)
-        st.session_state.last_update_time = current_time
-
-# Helper to create sliders with adjacent buttons
-def create_slider_with_buttons(label, min_val, max_val, current_value_key, step, is_percentage=False):
-    st.sidebar.write(label)
-    cols = st.sidebar.columns([1, 6, 1]) # Adjust column ratios for button placement
-
-    # Decrement button
-    with cols[0]:
-        if cols[0].button("◀️", key=f"btn_prev_{current_value_key}"):
-            new_val = st.session_state.slider_values[current_value_key] - step
-            if is_percentage:
-                new_val = max(min_val, new_val)
-            else:
-                new_val = max(min_val, int(new_val)) # Ensure integer for non-percentage
-            update_slider_value(current_value_key, new_val)
-            st.rerun() # Rerun immediately to update slider position and trigger backtest
-
-    # Slider
-    with cols[1]:
-        slider_display_value = st.session_state.slider_values[current_value_key]
-        if is_percentage:
-            slider_display_value = float(slider_display_value) # Ensure float
-        else:
-            slider_display_value = int(slider_display_value) # Ensure int
-
-        slider_val = st.slider(
-            " ", # Empty label as the main label is above
-            min_val, max_val,
-            slider_display_value,
-            step=step,
-            key=current_value_key,
-            on_change=on_slider_change,
-            args=(current_value_key,)
-        )
-        # Update session state from slider if it changes manually (mouse drag)
-        # This check is important to sync the button updates with the slider display
-        if slider_val != st.session_state.slider_values[current_value_key]:
-            update_slider_value(current_value_key, slider_val)
-
-
-    # Increment button
-    with cols[2]:
-        if cols[2].button("▶️", key=f"btn_next_{current_value_key}"):
-            new_val = st.session_state.slider_values[current_value_key] + step
-            if is_percentage:
-                new_val = min(max_val, new_val)
-            else:
-                new_val = min(max_val, int(new_val)) # Ensure integer for non-percentage
-            update_slider_value(current_value_key, new_val)
-            st.rerun() # Rerun immediately to update slider position and trigger backtest
-
-# Define sliders using the helper function
-create_slider_with_buttons(
-    "Starting Capital ($)",
+html\(js\_code, height\=0\)
+\# Sidebar inputs
+st\.sidebar\.header\("Strategy Parameters"\)
+\# We will keep the debounce logic for mouse interactions,
+\# but it's important to understand it's the bottleneck for keyboard speed\.
+\# For the new buttons, we will bypass it\.
+def update\_slider\_value\(slider\_key, value\)\:
+st\.session\_state\.slider\_values\[slider\_key\] \= value
+st\.session\_state\.active\_slider \= slider\_key \# Still useful for visual feedback
+st\.session\_state\.run\_backtest \= True \# Trigger recalculation
+def on\_slider\_change\(slider\_key\)\:
+\# This function is called by Streamlit's slider on\_change\.
+\# It still uses a debounce to prevent excessive re\-runs during dragging\.
+current\_time \= time\.time\(\)
+if current\_time \- st\.session\_state\.last\_update\_time \> 0\.5\:
+widget\_value \= st\.session\_state\[slider\_key\]
+if slider\_key in \["buy\_pct", "sell\_pct"\]\:
+widget\_value \= float\(widget\_value\)
+elif slider\_key \=\= "btc\_confirm"\:
+widget\_value \= bool\(widget\_value\)
+else\:
+widget\_value \= int\(widget\_value\)
+update\_slider\_value\(slider\_key, widget\_value\)
+st\.session\_state\.last\_update\_time \= current\_time
+\# Helper to create sliders with adjacent buttons
+def create\_slider\_with\_buttons\(label, min\_val, max\_val, current\_value\_key, step, is\_percentage\=False\)\:
+st\.sidebar\.write\(label\)
+cols \= st\.sidebar\.columns\(\[1, 6, 1\]\) \# Adjust column ratios for button placement
+\# Decrement button
+with cols\[0\]\:
+if cols\[0\]\.button\("◀️", key\=f"btn\_prev\_\{current\_value\_key\}"\)\:
+new\_val \= st\.session\_state\.slider\_values\[current\_value\_key\] \- step
+if is\_percentage\:
+new\_val \= max\(min\_val, new\_val\)
+else\:
+new\_val \= max\(min\_val, int\(new\_val\)\) \# Ensure integer for non\-percentage
+update\_slider\_value\(current\_value\_key, new\_val\)
+st\.rerun\(\) \# Rerun immediately to update slider position and trigger backtest
+\# Slider
+with cols\[1\]\:
+slider\_display\_value \= st\.session\_state\.slider\_values\[current\_value\_key\]
+if is\_percentage\:
+slider\_display\_value \= float\(slider\_display\_value\) \# Ensure float
+else\:
+slider\_display\_value \= int\(slider\_display\_value\) \# Ensure int
+slider\_val \= st\.slider\(
+" ", \# Empty label as the main label is above
+min\_val, max\_val,
+slider\_display\_value,
+step\=step,
+key\=current\_value\_key,
+on\_change\=on\_slider\_change,
+args\=\(current\_value\_key,\)
+\)
+\# Update session state from slider if it changes manually \(mouse drag\)
+\# This check is important to sync the button updates with the slider display
+if slider\_val \!\= st\.session\_state\.slider\_values\[current\_value\_key\]\:
+update\_slider\_value\(current\_value\_key, slider\_val\)
+\# Increment button
+with cols\[2\]\:
+if cols\[2\]\.button\("▶️", key\=f"btn\_next\_\{current\_value\_key\}"\)\:
+new\_val \= st\.session\_state\.slider\_values\[current\_value\_key\] \+ step
+if is\_percentage\:
+new\_val \= min\(max\_val, new\_val\)
+else\:
+new\_val \= min\(max\_val, int\(new\_val\)\) \# Ensure integer for non\-percentage
+update\_slider\_value\(current\_value\_key, new\_val\)
+st\.rerun\(\) \# Rerun immediately to update slider position and trigger backtest
+\# Define sliders using the helper function
+create\_slider\_with\_buttons\(
+"Starting Capital \(</span>)",
     0, 100000,
     "initial_capital",
     250
@@ -595,9 +586,9 @@ if not yearly_metrics_df.empty:
     # Apply number formatting to all relevant columns within the Styler
     # This formats the numbers *after* the color is applied.
     styled_yearly_metrics_df = styled_yearly_metrics_df.format({
-        "Profit": "${:,.2f}",
-        "Annual Return (%)": "{:.2f}%",
-        "Final Cash": "${:,.2f}",
+        "Profit": "<span class="math-inline">\{\:,\.2f\}",
+"Annual Return \(%\)"\: "\{\:\.2f\}%",
+"Final Cash"\: "</span>{:,.2f}",
         "Total Costs": "${:,.2f}"
     })
 
@@ -605,18 +596,15 @@ if not yearly_metrics_df.empty:
     st.write("**Yearly Metrics**")
     # Pass the styled DataFrame to st.dataframe
     st.dataframe(styled_yearly_metrics_df, hide_index=True)
-    st.write(f"**Total Profit Across All Years**: ${total_profit:,.2f}")
-else:
-    st.warning("No yearly metrics available. Check data span or trades.")
-# --- END MODIFIED PART ---
-
-
-# Display overall results
-st.header("Overall Backtest Results")
-col1, col2 = st.columns(2)
-
-with col1:
-    st.metric("Starting Capital", f"${initial_capital:,.2f}")
+    st.write(f"**Total Profit Across All Years**: <span class="math-inline">\{total\_profit\:,\.2f\}"\)
+else\:
+st\.warning\("No yearly metrics available\. Check data span or trades\."\)
+\# \-\-\- END MODIFIED PART \-\-\-
+\# Display overall results
+st\.header\("Overall Backtest Results"\)
+col1, col2 \= st\.columns\(2\)
+with col1\:
+st\.metric\("Starting Capital", f"</span>{initial_capital:,.2f}")
 
     # --- MODIFIED PART FOR CONDITIONAL PROFIT COLOR (Overall) ---
     profit_value = result['Profit']
@@ -630,33 +618,29 @@ with col1:
         f"""
         <div style="font-size: 14px; color: rgba(250, 250, 250, 0.6); margin-bottom: -15px;">Profit</div>
         <div style="font-size: 36px; font-weight: 600; color: {profit_color}; line-height: 1.2;">
-            {profit_sign}${profit_value:,.2f}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    # --- END MODIFIED PART ---
-
-    st.metric("Annualized Return", f"{result['Annualized Return']:.2f}%")
-
-with col2:
-    st.metric("Final Shares", f"{result['Final Shares']:,.2f}")
-    st.metric("Final Cash", f"${result['Final Cash']:,.2f}")
-    st.metric("Total Costs", f"${result['Costs']:,.2f}")
-
-st.metric("Number of Trades", result["Trades"])
-if result["Skipped_Trades"] > 0:
-    st.warning(f"**Skipped Trades**: {result['Skipped_Trades']} due to insufficient funds.")
-
-# Display trade summary
-st.subheader("Trade Summary")
-trades_df = result["Trades_df"]
-if not trades_df.empty:
-    # Format trade data for display
-    formatted_trades = trades_df.copy()
-    formatted_trades["Price"] = formatted_trades["Price"].apply(lambda x: f"${x:,.2f}")
-    formatted_trades["Size"] = formatted_trades["Size"].apply(lambda x: f"${x:,.2f}")
-    formatted_trades["BTC_Price"] = formatted_trades["BTC_Price"].apply(lambda x: f"${x:,.2f}")
+            {profit_sign}<span class="math-inline">\{profit\_value\:,\.2f\}
+</div\>
+""",
+unsafe\_allow\_html\=True
+\)
+\# \-\-\- END MODIFIED PART \-\-\-
+st\.metric\("Annualized Return", f"\{result\['Annualized Return'\]\:\.2f\}%"\)
+with col2\:
+st\.metric\("Final Shares", f"\{result\['Final Shares'\]\:,\.2f\}"\)
+st\.metric\("Final Cash", f"</span>{result['Final Cash']:,.2f}")
+    st.metric("Total Costs", f"<span class="math-inline">\{result\['Costs'\]\:,\.2f\}"\)
+st\.metric\("Number of Trades", result\["Trades"\]\)
+if result\["Skipped\_Trades"\] \> 0\:
+st\.warning\(f"\*\*Skipped Trades\*\*\: \{result\['Skipped\_Trades'\]\} due to insufficient funds\."\)
+\# Display trade summary
+st\.subheader\("Trade Summary"\)
+trades\_df \= result\["Trades\_df"\]
+if not trades\_df\.empty\:
+\# Format trade data for display
+formatted\_trades \= trades\_df\.copy\(\)
+formatted\_trades\["Price"\] \= formatted\_trades\["Price"\]\.apply\(lambda x\: f"</span>{x:,.2f}")
+    formatted_trades["Size"] = formatted_trades["Size"].apply(lambda x: f"<span class="math-inline">\{x\:,\.2f\}"\)
+formatted\_trades\["BTC\_Price"\] \= formatted\_trades\["BTC\_Price"\]\.apply\(lambda x\: f"</span>{x:,.2f}")
 
     st.dataframe(formatted_trades[["Date", "Type", "Price", "Shares", "Size", "BTC_Price", "F&G"]])
 
@@ -665,14 +649,14 @@ if not trades_df.empty:
 
     # Write strategy parameters
     csv_buffer.write("# Strategy Parameters\n")
-    csv_buffer.write(f"Starting Capital,${initial_capital:,.2f}\n")
-    csv_buffer.write(f"F&G Buy Threshold,{buy_threshold}\n")
-    csv_buffer.write(f"F&G Sell Threshold,{sell_threshold}\n")
-    csv_buffer.write(f"Buy Percentage,{buy_pct*100:.1f}%\n")
-    csv_buffer.write(f"Sell Percentage,{sell_pct*100:.1f}%\n")
-    csv_buffer.write(f"Use BTC Confirmation,{btc_confirm}\n")
-    csv_buffer.write(f"Cooldown Days,{cooldown_days}\n")
-    csv_buffer.write(f"Profit,${result['Profit']:,.2f}\n")
+    csv_buffer.write(f"Starting Capital,<span class="math-inline">\{initial\_capital\:,\.2f\}\\n"\)
+csv\_buffer\.write\(f"F&G Buy Threshold,\{buy\_threshold\}\\n"\)
+csv\_buffer\.write\(f"F&G Sell Threshold,\{sell\_threshold\}\\n"\)
+csv\_buffer\.write\(f"Buy Percentage,\{buy\_pct\*100\:\.1f\}%\\n"\)
+csv\_buffer\.write\(f"Sell Percentage,\{sell\_pct\*100\:\.1f\}%\\n"\)
+csv\_buffer\.write\(f"Use BTC Confirmation,\{btc\_confirm\}\\n"\)
+csv\_buffer\.write\(f"Cooldown Days,\{cooldown\_days\}\\n"\)
+csv\_buffer\.write\(f"Profit,</span>{result['Profit']:,.2f}\n")
     csv_buffer.write(f"Skipped Trades,{result['Skipped_Trades']}\n\n")
 
     # Write yearly metrics if available
@@ -704,80 +688,4 @@ def plot_price_path(price_col, title, color, trades_df, df):
     ax.plot(df["Date"], df[price_col], label=title, color=color, alpha=0.7)
 
     if not trades_df.empty:
-        buy_signals = trades_df[trades_df["Type"] == "Buy"]
-        sell_signals = trades_df[trades_df["Type"] == "Sell"]
-
-        if not buy_signals.empty:
-            ax.scatter(buy_signals["Date"],
-                       df.loc[df["Date"].isin(buy_signals["Date"]), price_col],
-                       color="green", label="Buy", marker="^", s=100)
-
-        if not sell_signals.empty:
-            ax.scatter(sell_signals["Date"],
-                       df.loc[df["Date"].isin(sell_signals["Date"]), price_col],
-                       color="red", label="Sell", marker="v", s=100)
-
-    # Add strategy info
-    text_str = (
-        f"Initial Capital: ${initial_capital:,.2f}\n"
-        f"F&G Buy Threshold: {buy_threshold}\n"
-        f"F&G Sell Threshold: {sell_threshold}\n"
-        f"Buy Percentage: {buy_pct*100:.1f}%\n"
-        f"Sell Percentage: {sell_pct*100:.1f}%\n"
-        f"BTC Confirmation: {btc_confirm}\n"
-        f"Cooldown Days: {cooldown_days}\n"
-        f"Total Profit: ${result['Profit']:,.2f}"
-    )
-
-    ax.text(0.02, 0.98, text_str, transform=ax.transAxes, fontsize=9,
-            verticalalignment='top', bbox=dict(boxstyle="round", facecolor="white", alpha=0.8))
-
-    ax.set_xlabel("Date")
-    ax.set_ylabel(f"{title.split()[0]} Price (USD)")
-    ax.set_title(f"{title} with Trades")
-    ax.legend()
-    ax.grid(True)
-
-    return fig
-
-# Plot MSTR price path
-st.subheader("MSTR Price Path")
-if not df.empty:
-    fig = plot_price_path("Adj Close", "MSTR Adj Close", "blue", result["Trades_df"], df)
-    st.pyplot(fig)
-
-    # Download button for the plot
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    buf.seek(0)
-    st.download_button(
-        label="Download MSTR Graph",
-        data=buf,
-        file_name="mstr_price_path.png",
-        mime="image/png"
-    )
-    buf.close()
-    plt.close(fig)
-else:
-    st.warning("No MSTR price data to plot.")
-
-# Plot BTC price path
-st.subheader("BTC Price Path")
-if not df.empty:
-    fig = plot_price_path("BTC_Close", "BTC Close", "orange", result["Trades_df"], df)
-    st.pyplot(fig)
-
-    # Download button for the plot
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", bbox_inches="tight")
-    buf.seek(0)
-    st.download_button(
-        label="Download BTC Graph",
-        data=buf,
-        file_name="btc_price_path.png",
-        mime="image/png"
-    )
-    buf.close()
-    plt.close(fig)
-else:
-    st.warning("No BTC price data to plot.")
+        buy_signals = trades_df[trades_df["Type"] == "
