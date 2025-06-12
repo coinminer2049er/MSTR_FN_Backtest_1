@@ -57,7 +57,7 @@ def get_live_fg_index():
 
 with st.expander("What is the MSTR F&G Strategy?"):
     st.markdown("""
-    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **[Bitcoin Fear & Greed (F&G) Index](https://alternative.me/crypto/fear-and-greed-index/)** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
+    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **[Bitcoin Fear & Greed (F&G) Index)](https://alternative.me/crypto/fear-and-greed-index/)** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
 
     For more information on MicroStrategy's Bitcoin strategy, visit the official **[Strategy Investor Relations](https://www.microstrategy.com/investor-relations)** page.
     """)
@@ -608,7 +608,6 @@ def compute_yearly_metrics(df, portfolio_df, trades_df):
             "Year": year,
             "Profit": year_profit,
             "Annual Return (%)": year_return,
-            "Final Shares": final_shares,
             "Final Cash": final_cash,
             "Total Costs": year_costs,
             "Number of Trades": num_trades
@@ -676,8 +675,8 @@ with col1:
         profit_sign = "" # No sign for negative values
     st.markdown(
         f"""
-        <div style="font-size: 14px; color: rgba(250, 250, 250, 0.6); margin-bottom: -15px;">Profit</div>
-        <div style="font-size: 36px; font-weight: 600; color: {profit_color}; line-height: 1.2;">
+        <div style="font-size: 14px; color: rgba(250, 250, 250, 0.6);">Profit</div>
+        <div style="font-size: 36px; font-weight: 600; color: {profit_color};">
             {profit_sign}${profit_value:,.2f}
         </div>
         """,
@@ -709,9 +708,9 @@ st.info(
 # New function for car comparison - now returns just the core sentence
 def get_car_comparison_text(profit_amount):
     if profit_amount <= -5000: # Significant loss
-        return f"${abs(profit_amount):,.2f} 😭 Ouch, how are you going to feed the kids?!"
+        return f"${profit_amount:,.2f} 😭 Ouch, how are you going to feed the kids?!"
     elif profit_amount < 0: # Small to moderate loss
-        return f"${abs(profit_amount):,.2f} 😥 Oh no, I can see a baked beans on toast diet in your future."
+        return f"${profit_amount:,.2f} 😥 Oh no, I can see a baked beans on toast diet in your future."
     elif profit_amount < 100: # Very small profit
         return f"${profit_amount:,.2f} 🤔 You might afford a decent coffee."
     elif profit_amount < 1000: # Small profit, mountain bike range
@@ -1035,7 +1034,7 @@ else:
     st.warning("No portfolio value data to plot.")
 
 
-# --- Monetization/Support Section (Added to sidebar) ---
+# --- Monetization/Support Section ---
 st.sidebar.markdown("---")
 st.sidebar.subheader("Support My Work!")
 st.sidebar.markdown(
@@ -1043,11 +1042,10 @@ st.sidebar.markdown(
     "Your generosity is greatly appreciated!"
 )
 
-# Replace with your actual Ko-fi or Buy Me a Coffee link
-st.sidebar.link_button("☕ Buy Me a Coffee", "https://ko-fi.com/yourusername_or_buymeacoffee_link") # <<< IMPORTANT: REPLACE THIS!
+# st.sidebar.link_button("☕ Buy Me a Coffee", "https://ko-fi.com/yourusername_or_buymeacoffee_link") # REMOVED AS REQUESTED
 
-# Replace with your actual Bitcoin address
-YOUR_BITCOIN_ADDRESS = "bc1q...your_bitcoin_address_here...xyz" # <<< IMPORTANT: REPLACE THIS!
+# Your Nested SegWit Address (starts with '3')
+YOUR_BITCOIN_ADDRESS = "39wDMRzG1u2n5BQsaF8LswaRwWLtnJRnkY"
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("Donate with Bitcoin (BTC)")
@@ -1078,20 +1076,13 @@ except Exception as e:
     st.sidebar.error(f"Error generating QR code: {e}")
 
 
-# --- Authorship/Source Code Section (Added to sidebar) ---
+# --- Authorship/Source Code Section (Updated) ---
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "App developed by **[Your Name/Twitter Handle]**. "
-    "For more projects and insights, follow me on Twitter: "
-    "[@[YourTwitterHandle]](https://twitter.com/[YourTwitterHandle])"
+    "App developed by **miner2049er**. "
+    "For more projects and insights, follow me on X: "
+    "[**@coinminer2049er**](https://x.com/coinminer2049er)"
 )
 st.sidebar.markdown(
-    "Find the source code on [GitHub](https://github.com/your-username/your-repo-name)."
+    "Find the source code on [GitHub](https://github.com/coinminer2049er/MSTR_FN_Backtest_1)." # <<< UPDATED LINK HERE
 )
-
-# Remember to update the placeholders:
-# - 'https://ko-fi.com/yourusername_or_buymeacoffee_link'
-# - 'bc1q...your_bitcoin_address_here...xyz'
-# - '[Your Name/Twitter Handle]'
-# - '[YourTwitterHandle]'
-# - 'https://github.com/your-username/your-repo-name'
