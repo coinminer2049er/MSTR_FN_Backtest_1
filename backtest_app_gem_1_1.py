@@ -41,7 +41,7 @@ st.markdown("---") # Horizontal line after the description
 def load_data():
     try:
         # Load MSTR data
-        mstr_data = pd.read_csv("MSTR.csv")
+        mstr_data = pd.read_csv("mstr.csv") # CHANGED TO LOWERCASE
         mstr_data["Date"] = pd.to_datetime(mstr_data["Date"], errors="coerce")
 
         # Find adjusted close column
@@ -51,14 +51,14 @@ def load_data():
                 adj_close_col = col
                 break
         if adj_close_col is None:
-            st.error("No adjusted close column found in MSTR.csv.")
+            st.error("No adjusted close column found in mstr.csv.") # Changed reference
             return None, None
 
         mstr_data = mstr_data[["Date", adj_close_col, "High", "Low"]].dropna()
         mstr_data = mstr_data.rename(columns={adj_close_col: "Adj Close"})
 
         # Load F&G data
-        fg_data = pd.read_csv("FG_Index.csv")
+        fg_data = pd.read_csv("fg_index.csv") # CHANGED TO LOWERCASE
         fg_data["Date"] = pd.to_datetime(fg_data["Date"], errors="coerce")
         fg_data = fg_data[["Date", "F&G", "BTC_Open", "BTC_Close", "BTC_High", "BTC_Low"]].dropna()
 
@@ -67,7 +67,7 @@ def load_data():
         df = df.sort_values("Date").reset_index(drop=True)
 
         if df.empty:
-            st.error("No overlapping dates between MSTR.csv and FG_Index.csv.")
+            st.error("No overlapping dates between mstr.csv and fg_index.csv.") # Changed reference
             return None, None
 
         # Calculate returns and correlation
@@ -78,7 +78,7 @@ def load_data():
         return df, mstr_data.columns.tolist()
 
     except FileNotFoundError as e:
-        st.error(f"CSV file not found: {e}. Ensure MSTR.csv and FG_Index.csv are in the correct directory.")
+        st.error(f"CSV file not found: {e}. Ensure mstr.csv and fg_index.csv are in the correct directory.") # Changed reference
         return None, None
     except Exception as e:
         st.error(f"Error loading CSV files: {e}")
