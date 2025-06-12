@@ -19,21 +19,43 @@ except ImportError:
     st.error("Streamlit is not installed. Please install it using `pip install streamlit`.")
     st.stop()
 
-# Streamlit app title
-st.title("MSTR F&G Strategy Backtest")
+# --- NEW APP TITLE AND DESCRIPTION ---
+st.title("Backtest your MSTR buying strategy using real historical data")
+st.markdown("Explore detailed strategy information, app instructions, and more below.")
 
-# --- APP DESCRIPTION ---
-st.markdown("""
-### What is the MSTR F&G Strategy?
-The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **Bitcoin Fear & Greed (F&G) Index** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
-""")
+# --- Detailed sections in Expanders ---
 
-st.markdown("""
-### Why This App?
-""")
-st.write("The **MSTR F&G Strategy Backtest App** empowers users to simulate and optimize this trading strategy with historical data. Its intuitive interface features **sliders to adjust parameters** like F&G thresholds, position sizes, and BTC confirmation, instantly showing their impact on returns, trades, and portfolio performance. Users can **save and load strategy configurations**, view detailed yearly metrics, and explore MSTR and BTC price charts with trade signals, which can be downloaded as images. Built for traders and investors, the app offers a **risk-free way to refine strategies and gain insights.**")
+with st.expander("What is the MSTR F&G Strategy?"):
+    st.markdown("""
+    The **MSTR Bitcoin Fear & Greed Strategy** is a trading system that harnesses market sentiment to guide investments in MicroStrategy (**MSTR**) stock. It uses the **Bitcoin Fear & Greed (F&G) Index** to pinpoint trading opportunities: buying when fear is high (low F&G scores) and selling when greed peaks (high F&G scores). Optional **Bitcoin (BTC) price confirmation** aligns MSTR trades with BTC market trends, leveraging their correlation. Customizable settings, like initial capital, trade size, and cooldown periods, let users tailor the strategy to their preferences.
+    """)
 
-st.markdown("---") # Horizontal line after the description
+with st.expander("App Instructions"):
+    st.markdown("""
+    The **MSTR F&G Strategy Backtest App** empowers users to simulate and optimize this trading strategy with historical data. Its intuitive interface features **sliders to adjust parameters** like F&G thresholds, position sizes, and BTC confirmation, instantly showing their impact on returns, trades, and portfolio performance. Users can **save and load strategy configurations**, view detailed yearly metrics, and explore MSTR and BTC price charts with trade signals, which can be downloaded as images. Built for traders and investors, the app offers a **risk-free way to refine strategies and gain insights.**
+    """)
+
+with st.expander("Why buy MSTR over Bitcoin?"):
+    st.markdown("""
+    Choosing to invest in MSTR (MicroStrategy) as opposed to directly buying Bitcoin
+    is a strategy some investors adopt for various reasons:
+
+    * **Traditional Market Accessibility:** MSTR is a NASDAQ-listed public company. This means it can be bought and sold through conventional stock brokerage accounts, making it familiar and accessible to investors who prefer not to use cryptocurrency exchanges or deal with direct crypto custody.
+    * **Corporate Structure & Governance:** Investing in MSTR means you're investing in a legally established corporation. While highly concentrated in Bitcoin, the company has an existing software business, management team, and follows traditional financial reporting standards. For some, this corporate wrapper offers a perceived layer of familiarity or regulatory clarity compared to holding Bitcoin directly.
+    * **Leveraged Bitcoin Exposure:** A significant portion of MicroStrategy's corporate treasury is allocated to Bitcoin. Historically, MicroStrategy has used debt financing to acquire large amounts of Bitcoin. This strategy can provide investors with a leveraged (though often more volatile) exposure to Bitcoin's price movements that might be difficult or costly to achieve through direct personal borrowing.
+    * **Michael Saylor's Conviction:** MicroStrategy's Executive Chairman, Michael Saylor, is a vocal and highly influential advocate for Bitcoin. His unwavering commitment to a Bitcoin-centric corporate treasury strategy provides a unique, ideologically-driven leadership that resonates with certain investors.
+
+    **Important Disclaimer:**
+    Investing in MSTR carries unique risks beyond direct Bitcoin exposure. This includes:
+    * **Stock Market Volatility:** MSTR's stock price is subject to equity market fluctuations and company-specific news, in addition to Bitcoin's volatility.
+    * **Premium/Discount to NAV:** MSTR's stock can trade at a significant premium or discount relative to the value of its underlying Bitcoin holdings, influenced by market sentiment and speculation.
+    * **Debt Risk:** The company's debt-financed Bitcoin acquisitions introduce additional financial risk.
+
+    This information is for educational purposes only and should not be considered financial advice. Bitcoin and MSTR investments are highly volatile and speculative. Always conduct your own thorough due diligence and consult with a qualified financial advisor before making any investment decisions.
+    """)
+
+# Horizontal line after the description - removed as expanders provide visual separation
+# st.markdown("---")
 # --- END APP DESCRIPTION ---
 
 # Load data
@@ -41,7 +63,7 @@ st.markdown("---") # Horizontal line after the description
 def load_data():
     try:
         # Load MSTR data
-        mstr_data = pd.read_csv("mstr.csv") # CHANGED TO LOWERCASE
+        mstr_data = pd.read_csv("mstr.csv")
         mstr_data["Date"] = pd.to_datetime(mstr_data["Date"], errors="coerce")
 
         # Find adjusted close column
@@ -51,14 +73,14 @@ def load_data():
                 adj_close_col = col
                 break
         if adj_close_col is None:
-            st.error("No adjusted close column found in mstr.csv.") # Changed reference
+            st.error("No adjusted close column found in mstr.csv.")
             return None, None
 
         mstr_data = mstr_data[["Date", adj_close_col, "High", "Low"]].dropna()
         mstr_data = mstr_data.rename(columns={adj_close_col: "Adj Close"})
 
         # Load F&G data
-        fg_data = pd.read_csv("fg_index.csv") # CHANGED TO LOWERCASE
+        fg_data = pd.read_csv("fg_index.csv")
         fg_data["Date"] = pd.to_datetime(fg_data["Date"], errors="coerce")
         fg_data = fg_data[["Date", "F&G", "BTC_Open", "BTC_Close", "BTC_High", "BTC_Low"]].dropna()
 
@@ -67,7 +89,7 @@ def load_data():
         df = df.sort_values("Date").reset_index(drop=True)
 
         if df.empty:
-            st.error("No overlapping dates between mstr.csv and fg_index.csv.") # Changed reference
+            st.error("No overlapping dates between mstr.csv and fg_index.csv.")
             return None, None
 
         # Calculate returns and correlation
@@ -78,7 +100,7 @@ def load_data():
         return df, mstr_data.columns.tolist()
 
     except FileNotFoundError as e:
-        st.error(f"CSV file not found: {e}. Ensure mstr.csv and fg_index.csv are in the correct directory.") # Changed reference
+        st.error(f"CSV file not found: {e}. Ensure mstr.csv and fg_index.csv are in the correct directory.")
         return None, None
     except Exception as e:
         st.error(f"Error loading CSV files: {e}")
